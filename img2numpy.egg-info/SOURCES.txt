@@ -1,0 +1,7 @@
+README.md
+setup.py
+img2numpy.egg-info/PKG-INFO
+img2numpy.egg-info/SOURCES.txt
+img2numpy.egg-info/dependency_links.txt
+img2numpy.egg-info/requires.txt
+img2numpy.egg-info/top_level.txt
