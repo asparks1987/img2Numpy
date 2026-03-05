@@ -1,0 +1,55 @@
+:root {
+  font-family: Inter, system-ui, sans-serif;
+  color: #1f2937;
+  background: #f3f4f6;
+}
+
+body {
+  margin: 0;
+}
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1rem 3rem;
+}
+
+.card {
+  background: white;
+  border-radius: 10px;
+  padding: 1rem;
+  margin-top: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.flags {
+  display: flex;
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+button {
+  background: #111827;
+  color: white;
+  border: none;
+  padding: 0.6rem 0.9rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.preview {
+  max-width: 280px;
+  display: block;
+  margin: 0.75rem 0;
+  border-radius: 8px;
+}
+
+.error {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
+pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+}

@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>img2numpy</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <h1>img2numpy</h1>
+      <p>Upload an image and convert it to a NumPy array in your browser or through the API.</p>
+
+      <form method="post" enctype="multipart/form-data" class="card">
+        <label>
+          Image
+          <input type="file" name="file" accept="image/*" required />
+        </label>
+
+        <div class="flags">
+          <label><input type="checkbox" name="color" checked /> Keep color</label>
+          <label><input type="checkbox" name="normalize" /> Normalize to [-1, 1]</label>
+        </div>
+
+        <button type="submit">Convert</button>
+      </form>
+
+      {% if error %}
+      <section class="card error">{{ error }}</section>
+      {% endif %}
+
+      {% if result %}
+      <section class="card">
+        <h2>Result: {{ result.filename }}</h2>
+        <img src="data:{{ result.mime_type }};base64,{{ result.preview_bytes }}" alt="Uploaded preview" class="preview" />
+        <ul>
+          <li><strong>Shape:</strong> {{ result.shape }}</li>
+          <li><strong>Dtype:</strong> {{ result.dtype }}</li>
+        </ul>
+        <h3>Preview (first rows)</h3>
+        <pre>{{ result.array_preview }}</pre>
+      </section>
+      {% endif %}
+
+      <section class="card">
+        <h2>API</h2>
+        <p>POST <code>/api/convert</code> with multipart form field <code>file</code> and optional <code>color</code> / <code>normalize</code>.</p>
+      </section>
+    </main>
+  </body>
+</html>

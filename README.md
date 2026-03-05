@@ -1,76 +1,77 @@
-# img2NumpyImage Processing with Numpy and PIL
-This Python script allows you to process images using the Pillow library and Numpy. Images are converted to Numpy arrays for further processing and can be normalized and stored in a .npz file for efficient storage and retrieval.
+# img2numpy
 
-Function Overview
-load_image(image_name: str) -> PIL.Image
-Loads an image into a PIL Image object.
+img2numpy is being rebuilt as a Docker-first app with:
 
-Args:
+- A **browser UI** for quick upload/preview conversions.
+- A **JSON API** for programmatic workflows.
+- A small **legacy compatibility module** (`Img2Numpy.py`) preserved from the old project.
 
-image_name: Path to the image.
-Returns:
+## What it does
 
-PIL Image object if successful, raises FileNotFoundError otherwise.
-img2numpy(image_name: str, color: bool=False) -> tuple
-Converts an image file to a normalized numpy array.
+Given an image file, img2numpy converts it to a NumPy array and returns:
 
-Args:
+- shape
+- dtype
+- full array (API)
+- preview information (UI)
 
-image_name: Path to the image.
-color: If True, keeps the color information. Otherwise, converts the image to grayscale.
-Returns:
+Supported image formats depend on Pillow and include common formats like PNG, JPEG, WEBP, and GIF.
 
-tuple: The image name and the normalized numpy array.
-folder2numpy(folder_path: str, color: bool=False) -> numpy.ndarray
-Converts all images in a folder to normalized numpy arrays.
+## Quick start (Docker)
 
-Args:
+```bash
+docker build -t img2numpy .
+docker run --rm -p 8000:8000 img2numpy
+```
 
-folder_path: Path to the folder.
-color: If True, keeps the color information. Otherwise, converts the images to grayscale.
-Returns:
+Open `http://localhost:8000`.
 
-numpy.ndarray: The images' names and the normalized numpy arrays.
-npz2array(npz_file_path: str) -> numpy.ndarray
-Loads a numpy array from a .npz file.
+## Quick start (local dev)
 
-Args:
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+```
 
-npz_file_path: Path to the .npz file.
-Returns:
+## API usage
 
-numpy.ndarray: The loaded numpy array.
-tuple2lists(input_array: numpy.ndarray) -> tuple
-Converts a numpy array of tuples into two lists.
+Endpoint:
 
-Args:
+- `POST /api/convert`
 
-input_array: A numpy array of tuples.
-Returns:
+Multipart fields:
 
-tuple: Two lists, one for the first elements of the tuples and one for the second elements.
-scrub_filename(filename: str) -> str
-Removes the file extension and numbers from a filename.
+- `file` (required): image upload
+- `color` (optional, default: `true`): keep color channels
+- `normalize` (optional, default: `false`): normalize pixel values to `[-1, 1]`
 
-Args:
+Example:
 
-filename: The filename.
-Returns:
+```bash
+curl -X POST "http://localhost:8000/api/convert" \
+  -F "file=@/path/to/image.png" \
+  -F "color=true" \
+  -F "normalize=false"
+```
 
-str: The scrubbed filename.
-Usage
-You can import the script and use its functions as needed in your data processing pipeline. For example:
-from myscript import folder2numpy, npz2array
+## Tests
 
-# Convert all images in a folder to numpy arrays and save the result
-folder2numpy("/path/to/my/images")
+```bash
+pip install -r requirements.txt
+pip install pytest
+pytest
+```
 
-# Load the data from the saved .npz file
-data = npz2array("/path/to/my/images_processed_images.npz")
-This script helps in creating a seamless pipeline for image processing tasks by handling image loading, conversion, normalization, and storage. It's also designed to provide clear error messages for common issues, such as missing files or incorrect data types.
+## Legacy module
 
-Dependencies
-Numpy
-Pillow
-Disclaimer
-Always make sure that you have the necessary permissions to read and write in the directories you use with this script.
+`Img2Numpy.py` still exposes:
+
+- `img2numpy`
+- `folder2numpy`
+- `npz2array`
+- `tuple2lists`
+- `scrub_filename`
+
+This helps older scripts continue to run while the new web/API app is built out.
