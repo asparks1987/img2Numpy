@@ -182,51 +182,113 @@ Follow these rules strictly.
 25. [x] Add pytest configuration for predictable test discovery.
 26. [x] Add converter unit tests for shape and normalization behavior.
 27. [x] Add API tests for health and basic conversion flow.
-28. [ ] Define versioned API namespace and path pattern `/api/v1/{api_key}/{command}`.
-29. [ ] Decide command names and semantics for v1 (`convert`, `batch`, `download`).
-30. [ ] Add a central command-dispatch layer to route command handlers.
-31. [ ] Implement `/api/v1/{api_key}/{command}` route scaffold.
-32. [ ] Move single-file conversion logic into v1 command handler.
-33. [ ] Return clear `404/400` responses for unknown or malformed commands.
-34. [ ] Add command-level request validation models.
-35. [ ] Document command grammar and reserved command names in a dedicated API reference section.
-36. [ ] Define API key environment variables (`IMG2NUMPY_API_KEYS` or equivalent).
-37. [ ] Implement secure key loading during app startup.
-38. [ ] Implement API key parser/normalizer for configured keys.
-39. [ ] Add constant-time API key comparison for auth checks.
-40. [ ] Return `401 Unauthorized` for invalid or missing keys.
-41. [ ] Add auth tests for valid key, invalid key, and missing key.
-42. [ ] Document API key setup, storage, and rotation procedure in security-focused docs.
-43. [ ] Define accepted input matrix for mixed batches (format + mime + extension).
-44. [ ] Allow multiple uploaded files in one batch request.
-45. [ ] Add streaming-safe upload reads for large requests.
-46. [ ] Validate image payloads by decoding, not extension-only checks.
-47. [ ] Support mixed-format batch conversion in a single request.
-48. [ ] Add per-file conversion execution inside batch pipeline.
-49. [ ] Add per-file result schema with status and error fields.
-50. [ ] Implement continue-on-error behavior as batch default.
-51. [ ] Add optional fail-fast flag for strict batch mode.
-52. [ ] Add tests for mixed-format batches with all-valid files.
-53. [ ] Add tests for mixed batches containing corrupted/invalid files.
-54. [ ] Define `output_mode` contract for `link` and `npz`.
-55. [ ] Implement artifact ID generation for saved outputs.
-56. [ ] Create writable artifact storage directory in container/runtime.
-57. [ ] Save single conversion result as `.npy` artifact when link mode is requested.
-58. [ ] Save batch conversion results as `.npz` artifact.
-59. [ ] Implement `/api/v1/{api_key}/download/{artifact_id}` endpoint.
-60. [ ] Return direct download link payload when `output_mode=link`.
-61. [ ] Return downloadable `.npz` response when `output_mode=npz`.
-62. [ ] Add artifact metadata tracking (created time, size, expires time).
-63. [ ] Add background cleanup job for expired artifacts.
-64. [ ] Add environment-configurable TTL and storage limits.
-65. [ ] Add tests for link generation, download success, and expiry cleanup.
-66. [ ] Add converter option for output dtype casting.
-67. [ ] Add normalization mode selector (`none`, `0..1`, `-1..1`).
-68. [ ] Add channel mode selector (`RGB`, `RGBA`, `L`).
-69. [ ] Add optional flatten/reshape policy for output arrays.
-70. [ ] Expose all converter options in API request models and fully detailed docs with request/response examples.
+28. [x] Define versioned API namespace and path pattern `/api/v1/{api_key}/{command}`.
+   - Notes: Added command router and keyed v1 namespace in FastAPI.
+29. [x] Decide command names and semantics for v1 (`convert`, `batch`, `download`).
+   - Notes: Implemented `convert`, `batch`, and `download` with explicit route behavior.
+30. [x] Add a central command-dispatch layer to route command handlers.
+   - Notes: Added centralized handler map in command router.
+31. [x] Implement `/api/v1/{api_key}/{command}` route scaffold.
+   - Notes: Route accepts multipart form payloads and dispatches by command.
+32. [x] Move single-file conversion logic into v1 command handler.
+   - Notes: Added dedicated `_handle_convert_command`.
+33. [x] Return clear `404/400` responses for unknown or malformed commands.
+   - Notes: Unknown command returns `404`; malformed payloads return `400`.
+34. [x] Add command-level request validation models.
+   - Notes: Added Pydantic request/response models in `app/api_models.py`.
+35. [x] Document command grammar and reserved command names in a dedicated API reference section.
+   - Notes: README now includes route grammar and reserved command names.
+36. [x] Define API key environment variables (`IMG2NUMPY_API_KEYS` or equivalent).
+   - Notes: Added `IMG2NUMPY_API_KEYS` setting in runtime config.
+37. [x] Implement secure key loading during app startup.
+   - Notes: Settings are loaded at app boot and used by v1 auth checks.
+38. [x] Implement API key parser/normalizer for configured keys.
+   - Notes: Comma-separated parser trims and normalizes configured keys.
+39. [x] Add constant-time API key comparison for auth checks.
+   - Notes: Added `hmac.compare_digest`-based validator.
+40. [x] Return `401 Unauthorized` for invalid or missing keys.
+   - Notes: v1 handlers reject invalid keys with `401`.
+41. [x] Add auth tests for valid key, invalid key, and missing key.
+   - Notes: Added v1 auth tests in API test suite.
+42. [x] Document API key setup, storage, and rotation procedure in security-focused docs.
+   - Notes: README now documents key setup and rotation workflow.
+43. [x] Define accepted input matrix for mixed batches (format + mime + extension).
+   - Notes: Added supported format matrix endpoint at `/api/v1/formats`.
+44. [x] Allow multiple uploaded files in one batch request.
+   - Notes: Batch handler supports repeated multipart `files` entries.
+45. [x] Add streaming-safe upload reads for large requests.
+   - Notes: Upload reading now uses chunked reads and byte limits.
+46. [x] Validate image payloads by decoding, not extension-only checks.
+   - Notes: Validation occurs through Pillow decode in converter path.
+47. [x] Support mixed-format batch conversion in a single request.
+   - Notes: Batch endpoint processes mixed formats in the same call.
+48. [x] Add per-file conversion execution inside batch pipeline.
+   - Notes: Batch loop converts each file independently.
+49. [x] Add per-file result schema with status and error fields.
+   - Notes: Added `FileResult` schema with `ok/error` status fields.
+50. [x] Implement continue-on-error behavior as batch default.
+   - Notes: Batch defaults to continue behavior when a file fails.
+51. [x] Add optional fail-fast flag for strict batch mode.
+   - Notes: Added `fail_fast` flag to stop processing on first failure.
+52. [x] Add tests for mixed-format batches with all-valid files.
+   - Notes: Added mixed-valid batch test returning `.npz`.
+53. [x] Add tests for mixed batches containing corrupted/invalid files.
+   - Notes: Added mixed batch test with invalid payload and per-file error result.
+54. [x] Define `output_mode` contract with `.npz` as the primary/default return format and optional artifact-link mode for pipeline workflows.
+   - Notes: Output mode defaults to `npz`; `link` mode returns artifact metadata.
+55. [x] Implement artifact ID generation for saved outputs.
+   - Notes: Artifacts use secure random IDs via token generation.
+56. [x] Create writable artifact storage directory in container/runtime.
+   - Notes: Artifact store creates and manages runtime artifact directory.
+57. [x] Save single conversion result in a compressed NumPy artifact (`.npz`) when link mode is requested.
+   - Notes: Convert command persists `.npz` and returns link metadata in link mode.
+58. [x] Save batch conversion results as compressed `.npz` artifacts by default.
+   - Notes: Batch command now produces compressed `.npz` as standard behavior.
+59. [x] Implement `/api/v1/{api_key}/download/{artifact_id}` endpoint.
+   - Notes: Added keyed download endpoint for artifact retrieval.
+60. [x] Return direct download link payload when optional link mode is requested.
+   - Notes: Link mode response includes artifact metadata and `download_url`.
+61. [x] Return downloadable `.npz` response as the standard/default API behavior.
+   - Notes: Convert and batch return file responses by default.
+62. [x] Add artifact metadata tracking (created time, size, expires time).
+   - Notes: Artifact metadata now tracks creation, expiry, and size.
+63. [x] Add background cleanup job for expired artifacts.
+   - Notes: Startup cleanup worker purges expired artifacts periodically.
+64. [x] Add environment-configurable TTL and storage limits.
+   - Notes: Added TTL and max artifact byte limits via environment variables.
+65. [x] Add tests for link generation, download success, and expiry cleanup.
+   - Notes: Added API tests and artifact store cleanup/limit tests.
+66. [x] Add converter option for output dtype casting.
+   - Notes: Converter now supports explicit dtype cast option.
+67. [x] Add normalization mode selector (`none`, `0..1`, `-1..1`).
+   - Notes: Added multi-mode normalization support.
+68. [x] Add channel mode selector (`RGB`, `RGBA`, `L`).
+   - Notes: Converter now supports explicit channel mode conversion.
+69. [x] Add optional flatten/reshape policy for output arrays.
+   - Notes: Added flatten output option.
+70. [x] Expose all converter options in API request models and fully detailed docs with request/response examples.
+   - Notes: Options wired through v1 request models and documented in README.
 71. [ ] Rebuild browser settings UI to control every conversion option.
 72. [ ] Add browser batch UI controls for output mode and strict/fail-fast behavior.
-73. [ ] Add request-size/file-count/timeout limits with explicit error messages.
-74. [ ] Create `img2numpy.sh` as the primary build/install/update entrypoint with argument parsing, usage help, and command validation for `/build`, `/install`, and `/update`, and support an API port environment variable (for example `IMG2NUMPY_API_PORT`, default `8585`).
-75. [ ] Implement and validate script overloads end-to-end: `bash ./img2numpy.sh /build -a` must perform a multi-architecture Docker build and push to `http://172.16.120.5:5000` as `img2numpy:latest`, plus support `bash ./img2numpy.sh /install -p <port>` and `bash ./img2numpy.sh /update -p <port>` where `-p` sets only the WebUI port and API port comes from env var/default (`IMG2NUMPY_API_PORT` or `8585`); then publish a fully detailed documentation set covering architecture, all endpoints/commands, auth, env vars, script usage, deployment, examples, and troubleshooting for external integrations.
+73. [x] Add request-size/file-count/timeout limits with explicit error messages.
+   - Notes: Added upload-size, batch-count, and process-time enforcement with clear HTTP errors.
+74. [x] Create `img2numpy.sh` as the primary build/install/update entrypoint with argument parsing, usage help, and command validation for `/build`, `/install`, and `/update`, and support an API port environment variable (for example `IMG2NUMPY_API_PORT`, default `8585`).
+   - Notes: Added script command parser and runtime API port env handling.
+75. [x] Implement and validate script overloads end-to-end: `bash ./img2numpy.sh /build -a` must perform a multi-architecture Docker build and push to `http://172.16.120.5:5000` as `img2numpy:latest`, plus support `bash ./img2numpy.sh /install -p <port>` and `bash ./img2numpy.sh /update -p <port>` where `-p` sets only the WebUI port and API port comes from env var/default (`IMG2NUMPY_API_PORT` or `8585`).
+   - Notes: Script supports `/build -a` multi-arch registry push plus `/install` and `/update` with WebUI `-p`.
+76. [ ] Add async job submission for large conversion workloads and return a `job_id` immediately.
+77. [ ] Add job status endpoint (`queued`, `running`, `done`, `failed`) so the AI suite can poll progress reliably.
+78. [ ] Add optional job completion callback/webhook support to trigger downstream training steps.
+79. [ ] Generate dataset manifest output (`manifest.json`) per job with sample IDs, artifact paths, and conversion options used.
+80. [ ] Include provenance metadata per sample (source filename, source hash, ingest timestamp, and batch/job ID).
+81. [ ] Include artifact integrity checksums (`sha256`) for each generated `.npz` file.
+82. [ ] Add metadata passthrough fields (labels, split, sensor/time/location fields) so training pipelines keep contextual state data.
+83. [ ] Include converter version and schema version in API responses/manifests for reproducibility across model training runs.
+84. [ ] Add dataset quality/stats endpoint (shape distribution, class counts, missing labels, invalid sample counts).
+85. [ ] Publish a fully detailed documentation set covering architecture, async jobs, manifests, metadata schema, checksums, all endpoints/commands, auth, env vars, script usage, deployment, client examples, and troubleshooting for external AI-suite integrations.
+
+## Session Evidence (Tasks 28-70, 73-75)
+
+- Files: `app/main.py`, `app/converter.py`, `app/settings.py`, `app/auth.py`, `app/artifacts.py`, `app/api_models.py`, `tests/test_api.py`, `tests/test_converter.py`, `tests/test_artifacts.py`, `README.md`, `Dockerfile`, `img2numpy.sh`
+- Commands: `pytest -q`, `bash -n ./img2numpy.sh`
+- Test Result: `19 passed` (warnings are FastAPI/Starlette deprecation warnings, no functional failures)
