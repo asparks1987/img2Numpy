@@ -268,27 +268,79 @@ Follow these rules strictly.
    - Notes: Added flatten output option.
 70. [x] Expose all converter options in API request models and fully detailed docs with request/response examples.
    - Notes: Options wired through v1 request models and documented in README.
-71. [ ] Rebuild browser settings UI to control every conversion option.
-72. [ ] Add browser batch UI controls for output mode and strict/fail-fast behavior.
+71. [x] Rebuild browser settings UI to control every conversion option.
+   - Notes: Browser form now supports dtype, normalize mode, channel mode, flatten, metadata-only, output mode, and multi-file uploads with structured result cards.
+   - Files: `app/templates/index.html`, `app/static/styles.css`, `app/main.py`
+   - Tests: `pytest -q`
+72. [x] Add browser batch UI controls for output mode and strict/fail-fast behavior.
+   - Notes: UI now includes output-mode selector and fail-fast toggle; server-side UI handler applies fail-fast behavior and batch summaries/per-file statuses.
+   - Files: `app/templates/index.html`, `app/main.py`, `tests/test_api.py`
+   - Tests: `pytest -q`
 73. [x] Add request-size/file-count/timeout limits with explicit error messages.
    - Notes: Added upload-size, batch-count, and process-time enforcement with clear HTTP errors.
 74. [x] Create `img2numpy.sh` as the primary build/install/update entrypoint with argument parsing, usage help, and command validation for `/build`, `/install`, and `/update`, and support an API port environment variable (for example `IMG2NUMPY_API_PORT`, default `8585`).
    - Notes: Added script command parser and runtime API port env handling.
 75. [x] Implement and validate script overloads end-to-end: `bash ./img2numpy.sh /build -a` must perform a multi-architecture Docker build and push to `http://172.16.120.5:5000` as `img2numpy:latest`, plus support `bash ./img2numpy.sh /install -p <port>` and `bash ./img2numpy.sh /update -p <port>` where `-p` sets only the WebUI port and API port comes from env var/default (`IMG2NUMPY_API_PORT` or `8585`).
    - Notes: Script supports `/build -a` multi-arch registry push plus `/install` and `/update` with WebUI `-p`.
-76. [ ] Add async job submission for large conversion workloads and return a `job_id` immediately.
-77. [ ] Add job status endpoint (`queued`, `running`, `done`, `failed`) so the AI suite can poll progress reliably.
-78. [ ] Add optional job completion callback/webhook support to trigger downstream training steps.
-79. [ ] Generate dataset manifest output (`manifest.json`) per job with sample IDs, artifact paths, and conversion options used.
-80. [ ] Include provenance metadata per sample (source filename, source hash, ingest timestamp, and batch/job ID).
-81. [ ] Include artifact integrity checksums (`sha256`) for each generated `.npz` file.
-82. [ ] Add metadata passthrough fields (labels, split, sensor/time/location fields) so training pipelines keep contextual state data.
-83. [ ] Include converter version and schema version in API responses/manifests for reproducibility across model training runs.
-84. [ ] Add dataset quality/stats endpoint (shape distribution, class counts, missing labels, invalid sample counts).
-85. [ ] Publish a fully detailed documentation set covering architecture, async jobs, manifests, metadata schema, checksums, all endpoints/commands, auth, env vars, script usage, deployment, client examples, and troubleshooting for external AI-suite integrations.
+76. [x] Add async job submission for large conversion workloads and return a `job_id` immediately.
+   - Notes: Added async job submit endpoint returning `job_id`, `status_url`, `manifest_url`, and `stats_url`.
+   - Files: `app/main.py`, `app/jobs.py`, `tests/test_api.py`
+   - Tests: `pytest -q`
+77. [x] Add job status endpoint (`queued`, `running`, `done`, `failed`) so the AI suite can poll progress reliably.
+   - Notes: Added status polling endpoint with lifecycle states and artifact/callback details.
+   - Files: `app/main.py`, `app/jobs.py`, `tests/test_api.py`
+   - Tests: `pytest -q`
+78. [x] Add optional job completion callback/webhook support to trigger downstream training steps.
+   - Notes: Added optional callback URL support and callback delivery status tracking on jobs.
+   - Files: `app/jobs.py`, `app/main.py`, `tests/test_api.py`
+   - Tests: `pytest -q`
+79. [x] Generate dataset manifest output (`manifest.json`) per job with sample IDs, artifact paths, and conversion options used.
+   - Notes: Job manifests include sample IDs, artifact keys, conversion options, and aggregate counts.
+   - Files: `app/jobs.py`, `app/main.py`, `tests/test_api.py`
+   - Tests: `pytest -q`
+80. [x] Include provenance metadata per sample (source filename, source hash, ingest timestamp, and batch/job ID).
+   - Notes: Per-sample provenance now includes filename, source hash, ingest timestamp, and job ID.
+   - Files: `app/jobs.py`, `tests/test_api.py`
+   - Tests: `pytest -q`
+81. [x] Include artifact integrity checksums (`sha256`) for each generated `.npz` file.
+   - Notes: Async jobs compute and return SHA256 checksums for created artifacts.
+   - Files: `app/jobs.py`, `app/main.py`, `tests/test_api.py`
+   - Tests: `pytest -q`
+82. [x] Add metadata passthrough fields (labels, split, sensor/time/location fields) so training pipelines keep contextual state data.
+   - Notes: Added `metadata_json` passthrough with global/per-file metadata merged into sample results and manifests.
+   - Files: `app/main.py`, `app/jobs.py`, `README.md`, `tests/test_api.py`
+   - Tests: `pytest -q`
+83. [x] Include converter version and schema version in API responses/manifests for reproducibility across model training runs.
+   - Notes: Manifests now include `converter_version` and `schema_version`.
+   - Files: `app/jobs.py`, `README.md`, `tests/test_api.py`
+   - Tests: `pytest -q`
+84. [x] Add dataset quality/stats endpoint (shape distribution, class counts, missing labels, invalid sample counts).
+   - Notes: Added job stats endpoint with shape distribution, class/split counts, missing labels, and valid/invalid totals.
+   - Files: `app/main.py`, `app/jobs.py`, `README.md`, `tests/test_api.py`
+   - Tests: `pytest -q`
+85. [x] Publish a fully detailed documentation set covering architecture, async jobs, manifests, metadata schema, checksums, all endpoints/commands, auth, env vars, script usage, deployment, client examples, and troubleshooting for external AI-suite integrations.
+   - Notes: Rewrote README with full API/UI/job documentation, env vars, command grammar, output model, and examples.
+   - Files: `README.md`
+   - Tests: `pytest -q`
+86. [x] Add WebUI API key profile management so multiple client applications can be identified and run conversions simultaneously.
+   - Notes: Added persistent API key store, WebUI key generation/revocation workflows, per-key client profile metadata, and auth integration so all v1 routes validate against stored keys.
+   - Files: `app/key_store.py`, `app/main.py`, `app/templates/index.html`, `app/static/styles.css`, `app/settings.py`, `README.md`, `tests/test_api.py`, `tests/test_key_store.py`
+   - Tests: `pytest -q`
 
 ## Session Evidence (Tasks 28-70, 73-75)
 
 - Files: `app/main.py`, `app/converter.py`, `app/settings.py`, `app/auth.py`, `app/artifacts.py`, `app/api_models.py`, `tests/test_api.py`, `tests/test_converter.py`, `tests/test_artifacts.py`, `README.md`, `Dockerfile`, `img2numpy.sh`
 - Commands: `pytest -q`, `bash -n ./img2numpy.sh`
 - Test Result: `19 passed` (warnings are FastAPI/Starlette deprecation warnings, no functional failures)
+
+## Session Evidence (Tasks 71-72, 76-85)
+
+- Files: `app/main.py`, `app/jobs.py`, `app/templates/index.html`, `app/static/styles.css`, `tests/test_api.py`, `README.md`
+- Commands: `pytest -q`
+- Test Result: `23 passed` (warnings are FastAPI/Starlette deprecation warnings, no functional failures)
+
+## Session Evidence (Task 86)
+
+- Files: `app/key_store.py`, `app/main.py`, `app/templates/index.html`, `app/static/styles.css`, `app/settings.py`, `README.md`, `tests/test_api.py`, `tests/test_key_store.py`
+- Commands: `pytest -q`
+- Test Result: `26 passed` (warnings are FastAPI/Starlette deprecation warnings, no functional failures)

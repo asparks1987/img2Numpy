@@ -1,5 +1,7 @@
 import os
+import time
 from io import BytesIO
+from pathlib import Path
 
 from fastapi.testclient import TestClient
 from PIL import Image
@@ -7,8 +9,13 @@ from PIL import Image
 os.environ["IMG2NUMPY_API_KEYS"] = "test-key"
 os.environ["IMG2NUMPY_ARTIFACT_DIR"] = "tests/.artifacts"
 os.environ["IMG2NUMPY_ARTIFACT_TTL_SECONDS"] = "600"
+os.environ["IMG2NUMPY_API_KEY_STORE_PATH"] = "tests/.artifacts/api_keys.json"
 
-from app.main import app  # noqa: E402
+KEY_STORE_PATH = Path(os.environ["IMG2NUMPY_API_KEY_STORE_PATH"])
+if KEY_STORE_PATH.exists():
+    KEY_STORE_PATH.unlink()
+
+from app.main import api_key_store, app  # noqa: E402
 
 client = TestClient(app)
 
@@ -156,3 +163,144 @@ def test_supported_formats_endpoint():
     payload = response.json()
     assert "supported" in payload
     assert any(item["format"] == "PNG" for item in payload["supported"])
+
+
+def test_ui_single_conversion_with_full_options():
+    files = [("files", ("ui.png", make_image("PNG"), "image/png"))]
+    response = client.post(
+        "/",
+        data={
+            "output_mode": "link",
+            "dtype": "float32",
+            "normalize_mode": "0..1",
+            "channel_mode": "L",
+            "flatten": "true",
+        },
+        files=files,
+    )
+    assert response.status_code == 200
+    assert "Run Summary" in response.text
+    assert "Download artifact (.npz)" in response.text
+    assert "Per-file Results" in response.text
+
+
+def test_ui_batch_fail_fast_control():
+    files = [
+        ("files", ("bad.bin", b"not-an-image", "application/octet-stream")),
+        ("files", ("good.png", make_image("PNG"), "image/png")),
+    ]
+    response = client.post(
+        "/",
+        data={"output_mode": "link", "fail_fast": "true"},
+        files=files,
+    )
+    assert response.status_code == 400
+    assert "No files were converted successfully." in response.text
+
+
+def test_webui_generate_key_and_use_for_api_client_profile():
+    create_response = client.post(
+        "/keys/generate",
+        data={"client_name": "integration-suite-a", "description": "batch pipeline client"},
+    )
+    assert create_response.status_code == 200
+    assert "Generated API key for client profile" in create_response.text
+
+    key_record = next(record for record in api_key_store.list_records() if record.client_name == "integration-suite-a")
+    files = {"file": ("tiny.png", make_image(), "image/png")}
+    convert_response = client.post(f"/api/v1/{key_record.api_key}/convert", files=files)
+    assert convert_response.status_code == 200
+    assert "X-Artifact-Id" in convert_response.headers
+
+
+def test_webui_revoke_key_blocks_further_api_usage():
+    create_response = client.post("/keys/generate", data={"client_name": "integration-suite-b"})
+    assert create_response.status_code == 200
+
+    key_record = next(record for record in api_key_store.list_records() if record.client_name == "integration-suite-b")
+    revoke_response = client.post("/keys/revoke", data={"key_id": key_record.key_id})
+    assert revoke_response.status_code == 200
+    assert "Revoked API key profile" in revoke_response.text
+
+    files = {"file": ("tiny.png", make_image(), "image/png")}
+    convert_response = client.post(f"/api/v1/{key_record.api_key}/convert", files=files)
+    assert convert_response.status_code == 401
+
+
+def _poll_job(status_url: str, timeout_seconds: float = 5.0):
+    deadline = time.time() + timeout_seconds
+    payload = None
+    while time.time() < deadline:
+        response = client.get(status_url)
+        assert response.status_code == 200
+        payload = response.json()
+        if payload["status"] in {"done", "failed"}:
+            return payload
+        time.sleep(0.05)
+    raise AssertionError(f"Job did not finish in {timeout_seconds}s; last payload={payload}")
+
+
+def test_async_job_submission_status_manifest_and_stats():
+    files = [
+        ("files", ("frame1.png", make_image("PNG"), "image/png")),
+        ("files", ("frame2.jpg", make_image("JPEG"), "image/jpeg")),
+    ]
+    metadata_json = (
+        '{"global":{"split":"train","sensor":"camera-a"},'
+        '"per_file":{"frame1.png":{"label":"cat"},"frame2.jpg":{"label":"dog"}}}'
+    )
+    submit = client.post(
+        "/api/v1/test-key/jobs/submit",
+        data={"metadata_json": metadata_json, "output_mode": "npz"},
+        files=files,
+    )
+    assert submit.status_code == 200
+    submit_payload = submit.json()
+    assert submit_payload["job_id"]
+
+    status_payload = _poll_job(submit_payload["status_url"])
+    assert status_payload["status"] == "done"
+    assert status_payload["artifact_id"]
+    assert status_payload["artifact_sha256"]
+    assert status_payload["download_url"]
+
+    manifest_response = client.get(submit_payload["manifest_url"])
+    assert manifest_response.status_code == 200
+    manifest = manifest_response.json()
+    assert manifest["schema_version"] == "img2numpy.job_manifest.v1"
+    assert manifest["converter_version"] == "0.1.0"
+    assert manifest["ok_count"] == 2
+    first = manifest["results"][0]
+    assert "provenance" in first
+    assert "source_sha256" in first["provenance"]
+    assert "metadata" in first
+    assert first["metadata"]["split"] == "train"
+
+    stats_response = client.get(submit_payload["stats_url"])
+    assert stats_response.status_code == 200
+    stats = stats_response.json()
+    assert stats["total_sample_count"] == 2
+    assert stats["valid_sample_count"] == 2
+    assert stats["class_counts"]["cat"] == 1
+    assert stats["class_counts"]["dog"] == 1
+
+
+def test_async_job_optional_callback_is_recorded():
+    files = [("files", ("frame1.png", make_image("PNG"), "image/png"))]
+    submit = client.post(
+        "/api/v1/test-key/jobs/submit",
+        data={"callback_url": "http://127.0.0.1:1/callback"},
+        files=files,
+    )
+    assert submit.status_code == 200
+    status_payload = _poll_job(submit.json()["status_url"])
+    assert status_payload["status"] in {"done", "failed"}
+    assert status_payload["callback_url"] == "http://127.0.0.1:1/callback"
+    if status_payload["callback_status"] is None:
+        deadline = time.time() + 2
+        while time.time() < deadline:
+            status_payload = client.get(submit.json()["status_url"]).json()
+            if status_payload["callback_status"] is not None:
+                break
+            time.sleep(0.05)
+    assert status_payload["callback_status"] is not None

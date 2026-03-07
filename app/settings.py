@@ -10,6 +10,7 @@ class Settings:
     api_keys: tuple[str, ...]
     api_port: int
     artifact_dir: Path
+    api_key_store_path: Path
     artifact_ttl_seconds: int
     max_upload_bytes: int
     max_batch_files: int
@@ -37,10 +38,14 @@ def _as_int(name: str, default: int) -> int:
 def get_settings() -> Settings:
     root_dir = Path(__file__).resolve().parent.parent
     artifact_dir = Path(os.getenv("IMG2NUMPY_ARTIFACT_DIR", root_dir / "artifacts")).resolve()
+    api_key_store_path = Path(
+        os.getenv("IMG2NUMPY_API_KEY_STORE_PATH", artifact_dir / "api_keys.json")
+    ).resolve()
     return Settings(
         api_keys=_parse_api_keys(os.getenv("IMG2NUMPY_API_KEYS")),
         api_port=_as_int("IMG2NUMPY_API_PORT", 8585),
         artifact_dir=artifact_dir,
+        api_key_store_path=api_key_store_path,
         artifact_ttl_seconds=_as_int("IMG2NUMPY_ARTIFACT_TTL_SECONDS", 3600),
         max_upload_bytes=_as_int("IMG2NUMPY_MAX_UPLOAD_BYTES", 50 * 1024 * 1024),
         max_batch_files=_as_int("IMG2NUMPY_MAX_BATCH_FILES", 250),

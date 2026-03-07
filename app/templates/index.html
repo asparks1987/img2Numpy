@@ -9,20 +9,118 @@
   <body>
     <main class="container">
       <h1>img2numpy</h1>
-      <p>Upload an image and convert it to a NumPy array in your browser or through the API.</p>
+      <p>Upload one or more images, tune conversion settings, and generate compressed NumPy outputs.</p>
 
-      <form method="post" enctype="multipart/form-data" class="card">
+      <section class="card stack">
+        <h2>API Key Profiles</h2>
+        <p>Create one API key per client application/profile so multiple tools can run conversions simultaneously.</p>
+
+        {% if key_error %}
+        <div class="error-inline">{{ key_error }}</div>
+        {% endif %}
+        {% if key_message %}
+        <div class="ok-inline">{{ key_message }}</div>
+        {% endif %}
+        {% if new_api_key %}
+        <p><strong>New API key:</strong> <code>{{ new_api_key }}</code></p>
+        {% endif %}
+
+        <form method="post" action="/keys/generate" class="grid">
+          <label>
+            Client profile name
+            <input type="text" name="client_name" placeholder="analytics-suite-a" required />
+          </label>
+          <label>
+            Description (optional)
+            <input type="text" name="description" placeholder="pipeline/service purpose" />
+          </label>
+          <div>
+            <button type="submit">Generate API Key</button>
+          </div>
+        </form>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Client</th>
+              <th>API Key</th>
+              <th>Created</th>
+              <th>Last Used</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for key in api_keys %}
+            <tr>
+              <td>{{ key.client_name }}</td>
+              <td><code>{{ key.api_key }}</code></td>
+              <td>{{ key.created_at }}</td>
+              <td>{{ key.last_used_at or "-" }}</td>
+              <td>{{ "active" if key.active else "revoked" }}</td>
+              <td>
+                {% if key.active %}
+                <form method="post" action="/keys/revoke">
+                  <input type="hidden" name="key_id" value="{{ key.key_id }}" />
+                  <button type="submit">Revoke</button>
+                </form>
+                {% else %}
+                -
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </section>
+
+      <form method="post" enctype="multipart/form-data" class="card stack">
         <label>
-          Image
-          <input type="file" name="file" accept="image/*" required />
+          Images (single or batch)
+          <input type="file" name="files" accept="image/*" multiple required />
         </label>
 
-        <div class="flags">
-          <label><input type="checkbox" name="color" checked /> Keep color</label>
-          <label><input type="checkbox" name="normalize" /> Normalize to [-1, 1]</label>
-        </div>
+        <section class="grid">
+          <label>
+            Output mode
+            <select name="output_mode">
+              <option value="npz">npz (default)</option>
+              <option value="link">link</option>
+            </select>
+          </label>
 
-        <button type="submit">Convert</button>
+          <label>
+            Dtype (optional)
+            <input type="text" name="dtype" placeholder="float32, int16, uint8..." />
+          </label>
+
+          <label>
+            Normalize mode
+            <select name="normalize_mode">
+              <option value="none">none</option>
+              <option value="0..1">0..1</option>
+              <option value="-1..1">-1..1</option>
+            </select>
+          </label>
+
+          <label>
+            Channel mode
+            <select name="channel_mode">
+              <option value="">auto/original</option>
+              <option value="RGB">RGB</option>
+              <option value="RGBA">RGBA</option>
+              <option value="L">L (grayscale)</option>
+            </select>
+          </label>
+        </section>
+
+        <section class="flags">
+          <label><input type="checkbox" name="flatten" /> Flatten output</label>
+          <label><input type="checkbox" name="metadata_only" /> Metadata only (skip artifact)</label>
+          <label><input type="checkbox" name="fail_fast" /> Fail fast in batch mode</label>
+        </section>
+
+        <button type="submit">Run Conversion</button>
       </form>
 
       {% if error %}
@@ -30,21 +128,79 @@
       {% endif %}
 
       {% if result %}
-      <section class="card">
-        <h2>Result: {{ result.filename }}</h2>
-        <img src="data:{{ result.mime_type }};base64,{{ result.preview_bytes }}" alt="Uploaded preview" class="preview" />
+      <section class="card stack">
+        <h2>Run Summary</h2>
         <ul>
-          <li><strong>Shape:</strong> {{ result.shape }}</li>
-          <li><strong>Dtype:</strong> {{ result.dtype }}</li>
+          <li><strong>Command:</strong> {{ result.command }}</li>
+          <li><strong>Output mode:</strong> {{ result.output_mode }}</li>
+          <li><strong>Total files:</strong> {{ result.total_files }}</li>
+          <li><strong>Successful:</strong> {{ result.ok_count }}</li>
+          <li><strong>Errors:</strong> {{ result.error_count }}</li>
+          <li><strong>Fail fast:</strong> {{ result.fail_fast }}</li>
+          <li><strong>Metadata only:</strong> {{ result.metadata_only }}</li>
         </ul>
-        <h3>Preview (first rows)</h3>
-        <pre>{{ result.array_preview }}</pre>
+
+        <h3>Applied Options</h3>
+        <ul>
+          <li><strong>Dtype:</strong> {{ result.options.dtype or "default" }}</li>
+          <li><strong>Normalize:</strong> {{ result.options.normalize_mode }}</li>
+          <li><strong>Channel:</strong> {{ result.options.channel_mode or "auto/original" }}</li>
+          <li><strong>Flatten:</strong> {{ result.options.flatten }}</li>
+        </ul>
+
+        {% if result.artifact %}
+        <div class="artifact">
+          <p><strong>Artifact:</strong> {{ result.artifact.filename }}</p>
+          <p><strong>Artifact ID:</strong> <code>{{ result.artifact.artifact_id }}</code></p>
+          <p><a href="{{ result.artifact.download_url }}">Download artifact (.npz)</a></p>
+        </div>
+        {% endif %}
+      </section>
+
+      {% if result.preview %}
+      <section class="card">
+        <h2>Preview: {{ result.preview.filename }}</h2>
+        <img src="data:{{ result.preview.mime_type }};base64,{{ result.preview.preview_bytes }}" alt="Uploaded preview" class="preview" />
+        <ul>
+          <li><strong>Shape:</strong> {{ result.preview.shape }}</li>
+          <li><strong>Dtype:</strong> {{ result.preview.dtype }}</li>
+        </ul>
+        <h3>Array Preview</h3>
+        <pre>{{ result.preview.array_preview }}</pre>
       </section>
       {% endif %}
 
       <section class="card">
-        <h2>API</h2>
-        <p>POST <code>/api/convert</code> with multipart form field <code>file</code> and optional <code>color</code> / <code>normalize</code>.</p>
+        <h2>Per-file Results</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Filename</th>
+              <th>Status</th>
+              <th>Shape</th>
+              <th>Dtype</th>
+              <th>Error</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in result.results %}
+            <tr>
+              <td>{{ row.filename }}</td>
+              <td>{{ row.status }}</td>
+              <td>{{ row.shape }}</td>
+              <td>{{ row.dtype }}</td>
+              <td>{{ row.error or "-" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </section>
+      {% endif %}
+
+      <section class="card">
+        <h2>API Quick Notes</h2>
+        <p>Primary route: <code>POST /api/v1/{api_key}/{command}</code> with commands <code>convert</code>, <code>batch</code>, and <code>download</code>.</p>
+        <p>Async jobs: <code>POST /api/v1/{api_key}/jobs/submit</code> and poll <code>GET /api/v1/{api_key}/jobs/{job_id}</code>.</p>
       </section>
     </main>
   </body>

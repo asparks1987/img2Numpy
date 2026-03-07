@@ -1,13 +1,25 @@
 # img2numpy
 
-`img2numpy` is a Docker-first service for turning image files into NumPy arrays for browser workflows and AI pipeline automation.
+`img2numpy` is a Docker-first image-to-NumPy service with:
+
+- Browser UI for single and batch conversions with full option control
+- Versioned keyed API for synchronous conversions and artifact downloads
+- Async job API for larger ingestion and AI-suite pipeline integration
+
+Primary output format is compressed NumPy archives (`.npz`).
 
 ## Interfaces
 
-- Browser UI: `GET /` and `POST /`
-- Legacy API: `POST /api/convert` (JSON array payload)
-- Versioned keyed API: `POST /api/v1/{api_key}/{command}`
-- Artifact download API: `GET /api/v1/{api_key}/download/{artifact_id}`
+- Browser UI: `GET /`, `POST /`
+- Legacy API: `POST /api/convert`
+- v1 command API: `POST /api/v1/{api_key}/{command}`
+- Artifact download: `GET /api/v1/{api_key}/download/{artifact_id}`
+- Async jobs:
+  - `POST /api/v1/{api_key}/jobs/submit`
+  - `GET /api/v1/{api_key}/jobs/{job_id}`
+  - `GET /api/v1/{api_key}/jobs/{job_id}/manifest`
+  - `GET /api/v1/{api_key}/jobs/{job_id}/stats`
+- Supported-format matrix: `GET /api/v1/formats`
 
 ## Quick Start
 
@@ -30,150 +42,241 @@ bash ./img2numpy.sh /install -p 8000
 bash ./img2numpy.sh /update -p 8000
 ```
 
-- `/build -a` builds multi-arch and pushes `172.16.120.5:5000/img2numpy:latest`.
-- `-p` sets WebUI host port.
-- API host port comes from `IMG2NUMPY_API_PORT` (default `8585`).
+- `/build -a` performs multi-arch buildx push to `172.16.120.5:5000/img2numpy:latest`.
+- `-p` controls the WebUI host port.
+- API host port is controlled by `IMG2NUMPY_API_PORT` (default `8585`).
 
 ## Environment Variables
 
-- `IMG2NUMPY_API_KEYS`: comma-separated API keys for `/api/v1/*` (default: `dev-local-key`)
-- `IMG2NUMPY_API_PORT`: service port inside container/runtime (default: `8585`)
-- `IMG2NUMPY_ARTIFACT_DIR`: directory for generated `.npz` artifacts (default: `./artifacts`)
-- `IMG2NUMPY_ARTIFACT_TTL_SECONDS`: artifact lifetime in seconds (default: `3600`)
-- `IMG2NUMPY_MAX_UPLOAD_BYTES`: max bytes per uploaded file (default: `52428800`)
-- `IMG2NUMPY_MAX_BATCH_FILES`: max files per batch request (default: `250`)
-- `IMG2NUMPY_MAX_PROCESS_SECONDS`: max processing time per batch request (default: `120`)
-- `IMG2NUMPY_MAX_ARTIFACT_BYTES`: max total bytes allowed in artifact storage directory (default: `1073741824`)
+- `IMG2NUMPY_API_KEYS`: comma-separated API keys for `/api/v1/*` (default `dev-local-key`)
+- `IMG2NUMPY_API_KEY_STORE_PATH`: persistent API key profile store file (default `<artifact_dir>/api_keys.json`)
+- `IMG2NUMPY_API_PORT`: API/listen port (default `8585`)
+- `IMG2NUMPY_ARTIFACT_DIR`: output artifact directory (default `./artifacts`)
+- `IMG2NUMPY_ARTIFACT_TTL_SECONDS`: artifact expiration TTL in seconds (default `3600`)
+- `IMG2NUMPY_MAX_UPLOAD_BYTES`: max bytes per uploaded file (default `52428800`)
+- `IMG2NUMPY_MAX_BATCH_FILES`: max files per batch call (default `250`)
+- `IMG2NUMPY_MAX_PROCESS_SECONDS`: max processing time per batch/job (default `120`)
+- `IMG2NUMPY_MAX_ARTIFACT_BYTES`: max total artifact store bytes (default `1073741824`)
 
-## API v1 Reference
+## Browser UI
 
-### Command Route Grammar
+`POST /` supports:
+
+- multi-file uploads (`files`, repeated)
+- `output_mode` (`npz` default, `link` optional)
+- `dtype`
+- `normalize_mode` (`none`, `0..1`, `-1..1`)
+- `channel_mode` (`RGB`, `RGBA`, `L`, or auto)
+- `flatten`
+- `metadata_only`
+- `fail_fast` (applies in batch mode)
+
+UI result cards include run summary, applied settings, per-file statuses, preview for first successful file, and artifact download link when generated.
+
+### WebUI API key profiles
+
+The browser UI includes an **API Key Profiles** section to:
+
+- generate one key per client app/profile
+- persist keys on disk (`IMG2NUMPY_API_KEY_STORE_PATH`)
+- revoke keys when a client should lose access
+- inspect created/last-used timestamps per key
+
+Use generated keys as `{api_key}` in v1 command routes.
+
+## v1 Command API
+
+### Route grammar
 
 `POST /api/v1/{api_key}/{command}`
 
-Reserved command names:
+Reserved commands:
 
-- `convert`: single-file conversion
-- `batch`: multi-file conversion
-- `download`: artifact download by `artifact_id` form field
+- `convert`
+- `batch`
+- `download`
 
-Unknown commands return `404`.
+Unknown command returns `404`.
 
-### Convert Command
+### Common multipart fields
 
-Endpoint:
+- `output_mode`: `npz` (default) or `link`
+- `dtype`
+- `normalize_mode`: `none`, `0..1`, `-1..1`
+- `channel_mode`: `RGB`, `RGBA`, `L`
+- `flatten`: boolean
+- `metadata_only`: boolean
 
-- `POST /api/v1/{api_key}/convert`
+### `convert`
 
-Multipart fields:
+- Required field: `file`
+- Default response: downloadable `.npz`
+- `output_mode=link`: returns JSON with `artifact_id` + `download_url`
 
-- `file` (required)
-- `output_mode` (`npz` default, `link` optional)
-- `dtype` (optional cast, e.g. `float32`, `int16`)
-- `normalize_mode` (`none`, `0..1`, `-1..1`)
-- `channel_mode` (`RGB`, `RGBA`, `L`)
-- `flatten` (`true`/`false`)
-- `metadata_only` (`true`/`false`)
+### `batch`
 
-Default behavior: returns downloadable compressed `.npz`.
+- Required field: one or more `files`
+- Additional field: `fail_fast` (`false` default)
+- Mixed formats allowed in one request (decode-based validation)
+- Per-file status metadata returned in link mode
 
-### Batch Command
+### `download`
 
-Endpoint:
+- Field: `artifact_id` (multipart form)
+- Returns artifact stream
 
-- `POST /api/v1/{api_key}/batch`
-
-Multipart fields:
-
-- `files` (repeat this field for multiple files)
-- all convert fields above
-- `fail_fast` (`false` default): when `false`, continue after per-file errors
-
-Behavior:
-
-- Mixed image formats in the same request are supported.
-- Validation is decode-based (invalid/corrupt image payloads are reported per file).
-- Returns compressed `.npz` by default.
-- In `link` mode, returns JSON with `artifact_id`, `download_url`, and per-file status entries.
-
-### Download Artifact
-
-Endpoint:
+### Artifact download endpoint
 
 - `GET /api/v1/{api_key}/download/{artifact_id}`
 
-Returns the previously generated `.npz` artifact if not expired.
+## Async Job API
 
-### Supported Format Matrix
+### Submit
 
-Endpoint:
+`POST /api/v1/{api_key}/jobs/submit`
 
-- `GET /api/v1/formats`
+Multipart fields:
 
-Current matrix includes PNG, JPEG, WEBP, GIF, BMP, and TIFF MIME/extension mappings.
+- `files` (repeat for batch input)
+- all conversion fields from command API
+- `metadata_json` (optional JSON object)
+  - supported shape:
+    - `global`: metadata merged into all samples
+    - `per_file`: filename-keyed metadata overrides
+- `callback_url` (optional): completion callback target
 
-## Output Contract
+Response:
 
-- Primary output is compressed NumPy archives (`.npz`).
-- Optional link mode stores artifacts and returns an expiring download link payload.
-- Batch artifacts include a `__manifest_json__` entry containing per-file result metadata.
-- Errors are explicit (`400`, `401`, `404`, `408`, `413`) with actionable detail.
+- `job_id`
+- `status` (`queued`)
+- `status_url`
+- `manifest_url`
+- `stats_url`
+
+### Job status
+
+`GET /api/v1/{api_key}/jobs/{job_id}`
+
+Returns:
+
+- lifecycle fields: `queued`, `running`, `done`, `failed`
+- artifact metadata (`artifact_id`, `artifact_sha256`, download URL)
+- callback state (`callback_url`, `callback_status`)
+- links to manifest/stats endpoints
+
+### Manifest
+
+`GET /api/v1/{api_key}/jobs/{job_id}/manifest`
+
+Includes:
+
+- `schema_version` and `converter_version`
+- per-sample `sample_id`, `artifact_key`, status, shape/dtype
+- provenance (`source_filename`, `source_sha256`, `ingest_timestamp`, `job_id`)
+- metadata passthrough values
+- aggregate counts (`ok_count`, `error_count`)
+
+### Stats
+
+`GET /api/v1/{api_key}/jobs/{job_id}/stats`
+
+Includes:
+
+- `shape_distribution`
+- `class_counts`
+- `split_counts`
+- `missing_labels`
+- valid/invalid/total sample counts
+
+## Supported Input Matrix
+
+`GET /api/v1/formats`
+
+Current matrix covers:
+
+- PNG
+- JPEG
+- WEBP
+- GIF
+- BMP
+- TIFF
+
+## Output + Integrity Model
+
+- `.npz` is the primary/default response format
+- link mode returns artifact references for deferred retrieval
+- batch and job artifacts embed a `__manifest_json__` entry
+- async jobs compute and report artifact `sha256`
+- artifact retention is TTL-based with background cleanup
 
 ## Security
 
-### API Key Setup
-
-Set one or more keys:
+### API keys
 
 ```bash
 export IMG2NUMPY_API_KEYS="key-one,key-two,key-three"
 ```
 
-API keys are validated using constant-time comparison.
+Validation uses constant-time comparison.
 
-### Rotation Procedure
+Runtime behavior:
 
-1. Add new key to `IMG2NUMPY_API_KEYS` alongside current keys.
-2. Restart service and move clients to new key.
-3. Remove old key and restart service again.
+- API keys loaded from `IMG2NUMPY_API_KEY_STORE_PATH` are authoritative.
+- On first start, keys from `IMG2NUMPY_API_KEYS` seed the persistent store.
+- Key usage updates `last_used_at` timestamps for profile tracking.
+
+### Rotation
+
+1. Add new key to `IMG2NUMPY_API_KEYS` alongside existing keys.
+2. Restart service and migrate clients.
+3. Remove old key and restart again.
 
 ## Example Calls
 
-### 1) Convert one image (default `.npz` response)
+### Convert one file (default `.npz`)
 
 ```bash
 curl -X POST "http://127.0.0.1:8585/api/v1/dev-local-key/convert" \
-  -F "file=@/path/to/image.png"
+  -F "file=@/data/frame.png"
 ```
 
-### 2) Convert one image and get artifact link JSON
-
-```bash
-curl -X POST "http://127.0.0.1:8585/api/v1/dev-local-key/convert" \
-  -F "file=@/path/to/image.png" \
-  -F "output_mode=link"
-```
-
-### 3) Batch convert mixed files (link mode with per-file results)
+### Batch convert mixed files (link mode, continue on error)
 
 ```bash
 curl -X POST "http://127.0.0.1:8585/api/v1/dev-local-key/batch" \
-  -F "files=@/data/frame1.png" \
-  -F "files=@/data/frame2.jpg" \
-  -F "files=@/data/frame3.webp" \
+  -F "files=@/data/a.png" \
+  -F "files=@/data/b.jpg" \
+  -F "files=@/data/c.webp" \
   -F "output_mode=link" \
   -F "fail_fast=false"
 ```
 
-### 4) Download an artifact
+### Submit async job with metadata passthrough
 
 ```bash
-curl -L "http://127.0.0.1:8585/api/v1/dev-local-key/download/<artifact_id>" -o result.npz
+curl -X POST "http://127.0.0.1:8585/api/v1/dev-local-key/jobs/submit" \
+  -F "files=@/data/a.png" \
+  -F "files=@/data/b.jpg" \
+  -F 'metadata_json={"global":{"split":"train"},"per_file":{"a.png":{"label":"cat"},"b.jpg":{"label":"dog"}}}'
 ```
 
-## Legacy Compatibility
+### Poll status and fetch manifest
 
-`Img2Numpy.py` still exposes:
+```bash
+curl "http://127.0.0.1:8585/api/v1/dev-local-key/jobs/<job_id>"
+curl "http://127.0.0.1:8585/api/v1/dev-local-key/jobs/<job_id>/manifest"
+curl "http://127.0.0.1:8585/api/v1/dev-local-key/jobs/<job_id>/stats"
+```
+
+### Download artifact
+
+```bash
+curl -L "http://127.0.0.1:8585/api/v1/dev-local-key/download/<artifact_id>" -o output.npz
+```
+
+## Legacy compatibility
+
+`Img2Numpy.py` still provides:
 
 - `img2numpy`
 - `folder2numpy`
