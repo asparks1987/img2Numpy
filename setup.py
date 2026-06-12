@@ -6,7 +6,8 @@ setup(
     url="https://github.com/asparks1987/img2Numpy",
     author="Aryn M. Sparks",
     description="Browser/API app for converting images to numpy arrays.",
-    packages=find_packages(),
+    packages=find_packages(include=["app", "app.*", "img2numpy", "img2numpy.*"]),
+    package_data={"img2numpy": ["py.typed"]},
     install_requires=[
         "fastapi",
         "uvicorn[standard]",
@@ -14,5 +15,19 @@ setup(
         "python-multipart",
         "numpy",
         "Pillow",
+        "httpx",
     ],
+    extras_require={
+        "heif": ["pillow-heif>=0.17.0"],
+        "avif": ["pillow-heif>=0.17.0"],
+        "svg": ["cairosvg>=2.7.1"],
+        "pdf": ["pymupdf>=1.24.0"],
+        "raw": ["rawpy>=0.19.0"],
+        "all": [
+            "pillow-heif>=0.17.0",
+            "cairosvg>=2.7.1",
+            "pymupdf>=1.24.0",
+            "rawpy>=0.19.0",
+        ],
+    },
 )

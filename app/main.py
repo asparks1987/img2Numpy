@@ -15,6 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import ValidationError
 
+from img2numpy import supported_formats as sdk_supported_formats
 from app.api_models import ArtifactResponse, BatchCommandRequest, ConversionCommandRequest, FileResult
 from app.artifacts import ArtifactStore
 from app.converter import ConversionOptions, image_bytes_to_array
@@ -41,15 +42,6 @@ job_manager = JobManager(
     max_process_seconds=settings.max_process_seconds,
 )
 cleanup_task: asyncio.Task | None = None
-
-SUPPORTED_IMAGE_MATRIX = (
-    {"format": "PNG", "mime": ("image/png",), "extensions": (".png",)},
-    {"format": "JPEG", "mime": ("image/jpeg",), "extensions": (".jpg", ".jpeg")},
-    {"format": "WEBP", "mime": ("image/webp",), "extensions": (".webp",)},
-    {"format": "GIF", "mime": ("image/gif",), "extensions": (".gif",)},
-    {"format": "BMP", "mime": ("image/bmp",), "extensions": (".bmp",)},
-    {"format": "TIFF", "mime": ("image/tiff",), "extensions": (".tif", ".tiff")},
-)
 
 
 def _sanitize_npz_key(name: str, index: int) -> str:
@@ -351,7 +343,7 @@ def health() -> dict[str, str]:
 
 @app.get("/api/v1/formats")
 def supported_formats() -> dict[str, object]:
-    return {"supported": SUPPORTED_IMAGE_MATRIX}
+    return {"supported": sdk_supported_formats()}
 
 
 @app.get("/", response_class=HTMLResponse)
