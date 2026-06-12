@@ -5,7 +5,7 @@ setup(
     version="0.1.0",
     url="https://github.com/asparks1987/img2Numpy",
     author="Aryn M. Sparks",
-    description="Browser/API app for converting images to numpy arrays.",
+    description="Python SDK for converting images to NumPy arrays.",
     packages=find_packages(include=["app", "app.*", "img2numpy", "img2numpy.*"]),
     package_data={"img2numpy": ["py.typed"]},
     install_requires=[

@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="img2numpy is an open-source Python library for converting images into NumPy arrays directly inside your own source files."
+    />
+    <title>img2numpy SDK</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="#top" aria-label="img2numpy home">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span>img2numpy</span>
+      </a>
+      <nav class="site-nav" aria-label="Primary navigation">
+        <a href="#quickstart">Quickstart</a>
+        <a href="#formats">Formats</a>
+        <a href="#reference">Reference</a>
+        <a href="#source-files">Source files</a>
+      </nav>
+      <a class="header-action" href="#install">Install</a>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">Open-source Python SDK</p>
+          <h1>Convert images into NumPy arrays with one import.</h1>
+          <p class="hero-lede">
+            <code>img2numpy</code> turns common image inputs into <code>numpy.ndarray</code>
+            values for computer vision, ML preprocessing, notebooks, and batch pipelines.
+          </p>
+          <div class="hero-actions" id="install">
+            <a class="button primary" href="#quickstart">Start converting</a>
+            <a class="button secondary" href="#source-files">Use in code</a>
+          </div>
+          <div class="install-strip" aria-label="Install command">
+            <code>pip install img2numpy</code>
+            <button class="copy-button" data-copy="pip install img2numpy" type="button">Copy</button>
+          </div>
+        </div>
+        <figure class="hero-visual">
+          <img
+            src="./assets/hero-array-pipeline.png"
+            alt="Layered image thumbnails transforming into a structured array grid"
+          />
+        </figure>
+      </section>
+
+      <section class="signal-band" aria-label="Project highlights">
+        <div>
+          <strong>1-line import</strong>
+          <span><code>convert(image)</code> returns an array.</span>
+        </div>
+        <div>
+          <strong>Batch ready</strong>
+          <span>Directories, globs, iterables, and mixed sources.</span>
+        </div>
+        <div>
+          <strong>Library first</strong>
+          <span>Import it directly inside scripts, apps, notebooks, and pipelines.</span>
+        </div>
+      </section>
+
+      <section class="section split" id="quickstart">
+        <div class="section-copy">
+          <p class="eyebrow">Quickstart</p>
+          <h2>Pass an image. Get an array.</h2>
+          <p>
+            The default SDK path is intentionally small: import <code>convert</code>, pass a
+            supported image source, and receive a <code>numpy.ndarray</code>.
+          </p>
+          <ul class="check-list">
+            <li>Accepts file paths, bytes, file-like objects, PIL images, and URLs.</li>
+            <li>Supports channel conversion, normalization, dtype casting, resizing, and frames.</li>
+            <li>Keeps detailed metadata available through <code>convert_result()</code>.</li>
+          </ul>
+        </div>
+        <div class="code-panel">
+          <div class="panel-tabs" role="tablist" aria-label="Quickstart examples">
+            <button class="tab active" data-tab="single" type="button">Single image</button>
+            <button class="tab" data-tab="batch" type="button">Batch</button>
+            <button class="tab" data-tab="options" type="button">Options</button>
+          </div>
+          <pre class="code-block active" data-panel="single"><code>from img2numpy import convert
+
+array = convert("frame.png")
+
+print(array.shape)
+print(array.dtype)</code></pre>
+          <pre class="code-block" data-panel="batch"><code>from img2numpy import convert_many
+
+batch = convert_many("images/*.jpg")
+
+for result in batch.results:
+    if result.ok:
+        print(result.source, result.shape)</code></pre>
+          <pre class="code-block" data-panel="options"><code>from img2numpy import ConversionOptions, convert
+
+options = ConversionOptions(
+    channel_mode="RGB",
+    normalize_mode="0..1",
+    dtype="float32",
+    resize=(224, 224),
+)
+
+array = convert("sample.webp", options=options)</code></pre>
+          <button class="copy-button floating" data-copy-active-code type="button">Copy code</button>
+        </div>
+      </section>
+
+      <section class="section" id="formats">
+        <div class="section-heading">
+          <p class="eyebrow">Format coverage</p>
+          <h2>Built for popular image workflows.</h2>
+          <p>
+            The SDK reports decoder capabilities at runtime. Core raster formats are available by
+            default, while advanced formats are represented as optional backends.
+          </p>
+        </div>
+        <div class="format-toolbar" aria-label="Format filters">
+          <button class="filter active" data-filter="all" type="button">All</button>
+          <button class="filter" data-filter="core" type="button">Core</button>
+          <button class="filter" data-filter="optional" type="button">Optional</button>
+          <button class="filter" data-filter="render" type="button">Render to array</button>
+        </div>
+        <div class="format-grid" id="formatGrid">
+          <article class="format-card" data-kind="core">
+            <span>PNG</span>
+            <p>Lossless raster images with alpha support.</p>
+          </article>
+          <article class="format-card" data-kind="core">
+            <span>JPEG</span>
+            <p>Standard photo and dataset image format.</p>
+          </article>
+          <article class="format-card" data-kind="core">
+            <span>WEBP</span>
+            <p>Modern web images with lossy and lossless modes.</p>
+          </article>
+          <article class="format-card" data-kind="core">
+            <span>GIF</span>
+            <p>Static and animated frames with <code>frame="all"</code>.</p>
+          </article>
+          <article class="format-card" data-kind="core">
+            <span>BMP</span>
+            <p>Simple bitmap inputs for legacy pipelines.</p>
+          </article>
+          <article class="format-card" data-kind="core">
+            <span>TIFF</span>
+            <p>Multi-page and scientific imaging workflows.</p>
+          </article>
+          <article class="format-card" data-kind="optional">
+            <span>HEIF / HEIC</span>
+            <p>Phone camera formats through optional decoder support.</p>
+          </article>
+          <article class="format-card" data-kind="optional">
+            <span>AVIF</span>
+            <p>High-compression image assets when the backend is present.</p>
+          </article>
+          <article class="format-card" data-kind="render">
+            <span>SVG / PDF</span>
+            <p>Rendered to pixels, then returned as arrays.</p>
+          </article>
+          <article class="format-card" data-kind="optional">
+            <span>RAW</span>
+            <p>Camera raw families through optional raw decoding.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section reference-section" id="reference">
+        <div class="section-heading">
+          <p class="eyebrow">SDK reference</p>
+          <h2>A small surface area with room to grow.</h2>
+        </div>
+        <div class="reference-list">
+          <article>
+            <h3><code>convert(source, options=None)</code></h3>
+            <p>Returns a <code>numpy.ndarray</code>. This is the default path for users who just need pixels.</p>
+          </article>
+          <article>
+            <h3><code>convert_result(source, options=None)</code></h3>
+            <p>Returns <code>ConversionResult</code> with array, shape, dtype, source, format, and metadata.</p>
+          </article>
+          <article>
+            <h3><code>convert_many(sources, fail_fast=False)</code></h3>
+            <p>Expands folders, globs, and iterables into per-file conversion results.</p>
+          </article>
+          <article>
+            <h3><code>save_npz()</code> and <code>load_npz()</code></h3>
+            <p>Write and read compressed NumPy artifacts using the project manifest convention.</p>
+          </article>
+          <article>
+            <h3><code>decoder_capabilities()</code></h3>
+            <p>Reports which format backends are available in the current environment.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section split module-section" id="source-files">
+        <div class="section-copy">
+          <p class="eyebrow">Inside your code</p>
+          <h2>Import it where image data enters your program.</h2>
+          <p>
+            The core product is a normal Python package. Use it in a training script, image
+            preprocessing module, notebook, CLI tool, desktop app, or backend worker as a plain
+            function call.
+          </p>
+        </div>
+        <div class="terminal-panel" aria-label="Python module example">
+          <pre><code># preprocess.py
+from pathlib import Path
+
+from img2numpy import ConversionOptions, convert
+
+options = ConversionOptions(
+    channel_mode="RGB",
+    normalize_mode="0..1",
+    dtype="float32",
+)
+
+def load_frame(path: str | Path):
+    return convert(path, options=options)
+
+frame = load_frame("dataset/cat.png")
+print(frame.shape)</code></pre>
+          <button
+            class="copy-button floating"
+            data-copy='from img2numpy import convert
+
+array = convert("dataset/cat.png")
+print(array.shape)'
+            type="button"
+          >
+            Copy
+          </button>
+        </div>
+      </section>
+
+      <section class="section cta-section">
+        <div>
+          <p class="eyebrow">Open source alpha</p>
+          <h2>Designed for people who need arrays, not ceremony.</h2>
+          <p>
+            Start with the one-line SDK, then opt into batch conversion, metadata, and NPZ
+            helpers only when your pipeline needs them.
+          </p>
+        </div>
+        <a class="button primary" href="#quickstart">Try the SDK</a>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <span>img2numpy</span>
+      <a href="#top">Back to top</a>
+    </footer>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

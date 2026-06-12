@@ -1,10 +1,56 @@
 # img2numpy
 
-`img2numpy` is a Docker-first image-to-NumPy service with:
+`img2numpy` is a Python SDK for converting image inputs into NumPy arrays inside your own source files.
 
-- Browser UI for single and batch conversions with full option control
-- Versioned keyed API for synchronous conversions and artifact downloads
-- Async job API for larger ingestion and AI-suite pipeline integration
+```python
+from img2numpy import convert
+
+array = convert("frame.png")
+
+print(array.shape)
+print(array.dtype)
+```
+
+The primary product is the importable library. It also includes compatibility helpers and an optional FastAPI service for users who want HTTP conversion workflows.
+
+## SDK Quick Start
+
+```bash
+pip install img2numpy
+```
+
+```python
+from img2numpy import ConversionOptions, convert, convert_many
+
+array = convert("images/cat.png")
+
+options = ConversionOptions(
+    channel_mode="RGB",
+    normalize_mode="0..1",
+    dtype="float32",
+    resize=(224, 224),
+)
+
+normalized = convert("images/cat.webp", options=options)
+batch = convert_many("images/*.jpg")
+```
+
+Supported SDK inputs include:
+
+- file paths and `PathLike` objects
+- bytes
+- file-like objects
+- PIL images
+- URLs
+- directories, glob patterns, and iterables through `convert_many`
+
+Advanced SDK helpers:
+
+- `convert_result`: returns metadata-rich `ConversionResult`
+- `save_npz` and `load_npz`: write and read NumPy archives with manifest metadata
+- `supported_formats` and `decoder_capabilities`: inspect runtime decoder support
+
+## Optional Service
 
 Primary output format is compressed NumPy archives (`.npz`).
 
