@@ -1,18 +1,18 @@
 :root {
-  --ink: #24292f;
-  --muted: #57606a;
-  --paper: #ffffff;
-  --canvas: #f6f8fa;
-  --panel: #ffffff;
-  --line: #d0d7de;
-  --blue: #0969da;
-  --blue-dark: #0550ae;
-  --green: #2da44e;
-  --accent: #8250df;
-  --danger: #cf222e;
+  --ink: #c9d1d9;
+  --muted: #8b949e;
+  --paper: #0d1117;
+  --canvas: #0d1117;
+  --panel: #161b22;
+  --line: #30363d;
+  --blue: #58a6ff;
+  --blue-dark: #1f6feb;
+  --green: #3fb950;
+  --accent: #bc8cff;
+  --danger: #f85149;
   --code-bg: #0d1117;
   --code-border: #30363d;
-  --shadow: 0 16px 48px rgba(31, 35, 40, 0.14);
+  --shadow: 0 16px 48px rgba(1, 4, 9, 0.55);
   --mono: "SFMono-Regular", "Cascadia Code", Consolas, monospace;
   --sans: "Aptos", "Segoe UI", Tahoma, sans-serif;
 }
@@ -30,9 +30,9 @@ body {
   color: var(--ink);
   font-family: var(--sans);
   background:
-    radial-gradient(circle at 18% 16%, rgba(9, 105, 218, 0.1), transparent 30rem),
-    radial-gradient(circle at 88% 12%, rgba(130, 80, 223, 0.08), transparent 26rem),
-    linear-gradient(180deg, var(--canvas) 0%, var(--paper) 42%, var(--canvas) 100%);
+    radial-gradient(circle at 18% 16%, rgba(88, 166, 255, 0.08), transparent 30rem),
+    radial-gradient(circle at 88% 12%, rgba(188, 140, 255, 0.06), transparent 26rem),
+    linear-gradient(180deg, #0d1117 0%, #161b22 42%, #0d1117 100%);
 }
 
 a {
@@ -48,10 +48,10 @@ pre {
 p code,
 li code {
   padding: 0.12rem 0.28rem;
-  border: 1px solid rgba(9, 105, 218, 0.2);
+  border: 1px solid #30363d;
   border-radius: 5px;
-  color: var(--blue-dark);
-  background: rgba(9, 105, 218, 0.08);
+  color: #c9d1d9;
+  background: #161b22;
 }
 
 .site-header {
@@ -64,8 +64,8 @@ li code {
   gap: 1rem;
   min-height: 72px;
   padding: 0 5vw;
-  border-bottom: 1px solid rgba(208, 215, 222, 0.9);
-  background: rgba(255, 255, 255, 0.9);
+  border-bottom: 1px solid #30363d;
+  background: rgba(13, 17, 23, 0.92);
   backdrop-filter: blur(18px);
 }
 
@@ -82,9 +82,9 @@ li code {
   height: 32px;
   border-radius: 8px;
   background:
-    linear-gradient(90deg, var(--blue) 0 33%, var(--green) 33% 66%, var(--accent) 66%),
-    #fff;
-  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.65);
+    linear-gradient(90deg, #58a6ff 0 33%, #3fb950 33% 66%, #bc8cff 66%),
+    #0d1117;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.1);
 }
 
 .site-nav {
@@ -113,7 +113,7 @@ li code {
 .header-action {
   padding: 0.7rem 1rem;
   color: #fff;
-  background: var(--ink);
+  background: #238636;
 }
 
 .hero {
@@ -191,12 +191,12 @@ h3 {
 
 .button.primary {
   color: #fff;
-  background: var(--blue);
+  background: var(--blue-dark);
 }
 
 .button.secondary {
   color: var(--ink);
-  background: var(--canvas);
+  background: #21262d;
   border: 1px solid var(--line);
 }
 
@@ -208,7 +208,7 @@ h3 {
   padding: 0.5rem;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.78);
+  background: #161b22;
   box-shadow: 0 10px 40px rgba(35, 43, 52, 0.08);
 }
 
@@ -224,11 +224,11 @@ h3 {
   color: #fff;
   font-size: 0.85rem;
   font-weight: 750;
-  background: var(--ink);
+  background: #238636;
 }
 
 .copy-button.copied {
-  background: var(--green);
+  background: #2ea043;
 }
 
 .hero-visual {
@@ -241,7 +241,7 @@ h3 {
   width: 100%;
   max-height: 680px;
   object-fit: cover;
-  border: 1px solid rgba(255, 255, 255, 0.72);
+  border: 1px solid #30363d;
   border-radius: 8px;
   box-shadow: var(--shadow);
 }
@@ -259,7 +259,7 @@ h3 {
 
 .signal-band div {
   padding: 1.25rem;
-  background: rgba(255, 255, 255, 0.94);
+  background: #161b22;
 }
 
 .signal-band strong,
@@ -397,7 +397,7 @@ h3 {
   padding: 1rem;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.84);
+  background: #161b22;
 }
 
 .format-card[hidden] {
@@ -420,7 +420,7 @@ h3 {
 
 .reference-section {
   background:
-    linear-gradient(90deg, rgba(9, 105, 218, 0.08), rgba(130, 80, 223, 0.07)),
+    linear-gradient(90deg, rgba(88, 166, 255, 0.08), rgba(188, 140, 255, 0.07)),
     var(--canvas);
 }
 
@@ -437,7 +437,7 @@ h3 {
 .reference-list article {
   min-height: 210px;
   padding: 1rem;
-  background: #fff;
+  background: #161b22;
 }
 
 .module-section {
@@ -458,7 +458,7 @@ h3 {
   border-radius: 8px;
   color: #fff;
   background:
-    linear-gradient(135deg, #0969da, #24292f),
+    linear-gradient(135deg, #1f6feb, #0d1117),
     var(--blue);
 }
 
@@ -472,8 +472,8 @@ h3 {
 }
 
 .cta-section .button.primary {
-  color: var(--ink);
-  background: #fff;
+  color: #0d1117;
+  background: #f0f6fc;
 }
 
 .site-footer {
